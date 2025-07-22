@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuoteModal } from "@/components/modals/quote-modal";
 import { InvoiceModal } from "@/components/modals/invoice-modal";
 import { InvoicePDFModal } from "@/components/modals/invoice-pdf-modal";
+import { QuotePDFModal } from "@/components/modals/quote-pdf-modal";
 import { useToast } from "@/hooks/use-toast";
 import { quotesService, invoicesService } from "@/lib/firebase-service";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,9 +19,11 @@ export default function QuotesInvoices() {
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
+  const [isQuotePDFModalOpen, setIsQuotePDFModalOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [selectedInvoiceForPDF, setSelectedInvoiceForPDF] = useState<Invoice | null>(null);
+  const [selectedQuoteForPDF, setSelectedQuoteForPDF] = useState<Quote | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,8 +37,8 @@ export default function QuotesInvoices() {
       try {
         setIsLoading(true);
         const [quotesData, invoicesData] = await Promise.all([
-          quotesService.getAll(),
-          invoicesService.getAll()
+          quotesService.getAll(user.id),
+          invoicesService.getAll(user.id)
         ]);
         setQuotes(quotesData);
         setInvoices(invoicesData);
@@ -91,6 +94,11 @@ export default function QuotesInvoices() {
   const handleViewInvoicePDF = (invoice: Invoice) => {
     setSelectedInvoiceForPDF(invoice);
     setIsPDFModalOpen(true);
+  };
+
+  const handleViewQuotePDF = (quote: Quote) => {
+    setSelectedQuoteForPDF(quote);
+    setIsQuotePDFModalOpen(true);
   };
 
   const handleNewQuote = () => {
@@ -404,6 +412,20 @@ export default function QuotesInvoices() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
+                                  onClick={() => handleViewQuotePDF(quote)}
+                                  className="text-blue-400 hover:text-blue-300 hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-cyan-500/10 transition-all duration-200"
+                                  title="Voir le PDF"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                              </motion.div>
+                              <motion.div
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
                                   onClick={() => handleEditQuote(quote)}
                                   className="text-slate-400 hover:text-white hover:bg-gradient-to-r hover:from-slate-700/50 hover:to-slate-600/50 transition-all duration-200"
                                 >
@@ -659,6 +681,14 @@ export default function QuotesInvoices() {
             open={isPDFModalOpen}
             onOpenChange={setIsPDFModalOpen}
             invoice={selectedInvoiceForPDF}
+          />
+        )}
+
+        {selectedQuoteForPDF && (
+          <QuotePDFModal 
+            open={isQuotePDFModalOpen}
+            onOpenChange={setIsQuotePDFModalOpen}
+            quote={selectedQuoteForPDF}
           />
         )}
       </AnimatePresence>

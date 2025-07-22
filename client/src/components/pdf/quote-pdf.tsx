@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Document, Page, Text, View, StyleSheet, PDFViewer, pdf } from '@react-pdf/renderer';
 import { getCompanySettings } from '@/pages/settings';
 import { useAuth } from '@/hooks/useAuth';
-import type { Invoice, Client } from '@shared/schema';
+import type { Quote, Client } from '@shared/schema';
 
-interface InvoicePDFProps {
-  invoice: Invoice;
+interface QuotePDFProps {
+  quote: Quote;
   client: Client;
   lineItems?: Array<{
     product: string;
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
   },
   // Header avec bande colorée
   headerBand: {
-    backgroundColor: '#1e40af',
+    backgroundColor: '#4f46e5', // Couleur différente pour distinguer des factures
     padding: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     marginTop: 2,
   },
-  invoiceTitle: {
+  quoteTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#ffffff',
@@ -69,12 +69,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
     padding: 12,
     borderRadius: 8,
-    borderLeft: '3px solid #3b82f6',
+    borderLeft: '3px solid #4f46e5',
   },
   cardTitle: {
     fontSize: 11,
     fontWeight: 'bold',
-    color: '#1e40af',
+    color: '#4f46e5',
     marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -85,21 +85,21 @@ const styles = StyleSheet.create({
     lineHeight: 1.3,
     marginBottom: 2,
   },
-  // Section numéro de facture
-  invoiceNumberSection: {
-    backgroundColor: '#3b82f6',
+  // Section numéro de devis
+  quoteNumberSection: {
+    backgroundColor: '#4f46e5',
     padding: 12,
     borderRadius: 8,
     marginBottom: 15,
     alignItems: 'center',
   },
-  invoiceNumber: {
+  quoteNumber: {
     fontSize: 14,
     fontWeight: 'bold',
     color: '#ffffff',
     letterSpacing: 1,
   },
-  invoiceDate: {
+  quoteDate: {
     fontSize: 10,
     color: '#e2e8f0',
     marginTop: 3,
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     minWidth: 180,
-    borderLeft: '3px solid #10b981',
+    borderLeft: '3px solid #4f46e5',
   },
   totalRow: {
     flexDirection: 'row',
@@ -180,32 +180,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 8,
     paddingTop: 12,
-    borderTop: '2px solid #3b82f6',
+    borderTop: '2px solid #4f46e5',
   },
   finalTotalLabel: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#1e40af',
+    color: '#4f46e5',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   finalTotalValue: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#3b82f6',
+    color: '#4f46e5',
   },
   // Section notes
   notesSection: {
     marginTop: 25,
-    backgroundColor: '#fef3c7',
+    backgroundColor: '#f0f9ff',
     padding: 12,
     borderRadius: 8,
-    borderLeft: '3px solid #f59e0b',
+    borderLeft: '3px solid #4f46e5',
   },
   notesTitle: {
     fontSize: 11,
     fontWeight: 'bold',
-    color: '#92400e',
+    color: '#4f46e5',
     marginBottom: 5,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   notesText: {
     fontSize: 10,
     lineHeight: 1.4,
-    color: '#78350f',
+    color: '#334155',
   },
   // Footer moderne
   footer: {
@@ -238,9 +238,30 @@ const styles = StyleSheet.create({
     opacity: 0.1,
     zIndex: -1,
   },
+  // Section validité
+  validitySection: {
+    marginTop: 15,
+    backgroundColor: '#f0f9ff',
+    padding: 12,
+    borderRadius: 8,
+    borderLeft: '3px solid #4f46e5',
+  },
+  validityTitle: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#4f46e5',
+    marginBottom: 5,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  validityText: {
+    fontSize: 10,
+    lineHeight: 1.4,
+    color: '#334155',
+  },
 });
 
-const InvoicePDFDocument: React.FC<InvoicePDFProps> = ({ invoice, client, lineItems = [], companySettings }) => {
+const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quote, client, lineItems = [], companySettings }) => {
   
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return 'Invalid Date';
@@ -285,34 +306,34 @@ const InvoicePDFDocument: React.FC<InvoicePDFProps> = ({ invoice, client, lineIt
         {/* Header avec bande colorée */}
         <View style={styles.headerBand}>
           <View style={styles.brandSection}>
-            <Text style={styles.brandName}>{companySettings.companyName || clientName}</Text>
-            {companySettings.siret && (
+            <Text style={styles.brandName}>{companySettings?.companyName || 'Votre Entreprise'}</Text>
+            {companySettings?.siret && (
               <Text style={styles.brandSubtitle}>SIRET: {companySettings.siret}</Text>
             )}
-            {companySettings.address && (
+            {companySettings?.address && (
               <Text style={styles.brandSubtitle}>{companySettings.address}</Text>
             )}
-            {(companySettings.postalCode || companySettings.city) && (
+            {(companySettings?.postalCode || companySettings?.city) && (
               <Text style={styles.brandSubtitle}>
                 {[companySettings.postalCode, companySettings.city].filter(Boolean).join(' ')}
               </Text>
             )}
           </View>
-          <Text style={styles.invoiceTitle}>FACTURE</Text>
+          <Text style={styles.quoteTitle}>DEVIS</Text>
         </View>
 
         {/* Contenu principal */}
         <View style={styles.mainContent}>
-          {/* Numéro de facture stylé */}
-          <View style={styles.invoiceNumberSection}>
-            <Text style={styles.invoiceNumber}>N° {invoice.number}</Text>
-            <Text style={styles.invoiceDate}>Émise le {formatDate(invoice.issueDate)}</Text>
+          {/* Numéro de devis stylé */}
+          <View style={styles.quoteNumberSection}>
+            <Text style={styles.quoteNumber}>N° {quote.number}</Text>
+            <Text style={styles.quoteDate}>Émis le {formatDate(quote.issueDate)}</Text>
           </View>
 
           {/* Informations en cartes */}
           <View style={styles.infoSection}>
             <View style={styles.infoCard}>
-              <Text style={styles.cardTitle}>Facturé à</Text>
+              <Text style={styles.cardTitle}>Devis pour</Text>
               <Text style={styles.cardText}>{clientName}</Text>
               {client.address && <Text style={styles.cardText}>{client.address}</Text>}
               {cityLine && <Text style={styles.cardText}>{cityLine}</Text>}
@@ -322,15 +343,12 @@ const InvoicePDFDocument: React.FC<InvoicePDFProps> = ({ invoice, client, lineIt
             </View>
             
             <View style={styles.infoCard}>
-              <Text style={styles.cardTitle}>Détails de paiement</Text>
-              <Text style={styles.cardText}>Date d'échéance: {formatDate(invoice.dueDate)}</Text>
-              <Text style={styles.cardText}>Statut: {invoice.status === 'paye' ? 'Payée' : 'En attente'}</Text>
-              <Text style={styles.cardText}>Mode: Virement bancaire</Text>
-              {companySettings.siret && (
+              <Text style={styles.cardTitle}>Détails du devis</Text>
+              <Text style={styles.cardText}>Date d'émission: {formatDate(quote.issueDate)}</Text>
+              <Text style={styles.cardText}>Date de validité: {formatDate(quote.validityDate)}</Text>
+              <Text style={styles.cardText}>Statut: {quote.status === 'accepte' ? 'Accepté' : quote.status === 'refuse' ? 'Refusé' : 'En attente'}</Text>
+              {companySettings?.siret && (
                 <Text style={styles.cardText}>SIRET: {companySettings.siret}</Text>
-              )}
-              {companySettings.iban && (
-                <Text style={styles.cardText}>IBAN: {companySettings.iban}</Text>
               )}
             </View>
           </View>
@@ -370,42 +388,42 @@ const InvoicePDFDocument: React.FC<InvoicePDFProps> = ({ invoice, client, lineIt
             <View style={styles.totalsCard}>
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Sous-total HT</Text>
-                <Text style={styles.totalValue}>{formatCurrency(invoice.subtotal)}</Text>
+                <Text style={styles.totalValue}>{formatCurrency(quote.subtotal)}</Text>
               </View>
-              {(invoice.vatAmount && invoice.vatAmount > 0) && (
+              {(quote.vatAmount && quote.vatAmount > 0) && (
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>TVA</Text>
-                  <Text style={styles.totalValue}>{formatCurrency(invoice.vatAmount)}</Text>
+                  <Text style={styles.totalValue}>{formatCurrency(quote.vatAmount)}</Text>
                 </View>
               )}
               <View style={styles.finalTotalRow}>
                 <Text style={styles.finalTotalLabel}>TOTAL TTC</Text>
-                <Text style={styles.finalTotalValue}>{formatCurrency(invoice.total)}</Text>
+                <Text style={styles.finalTotalValue}>{formatCurrency(quote.total)}</Text>
               </View>
             </View>
           </View>
 
-          {/* Notes et conditions combinées */}
-          {(invoice.notes || invoice.paymentTerms || companySettings.rib) && (
-            <View style={[styles.notesSection, {marginTop: lineItems.length > 5 ? 8 : 15}]}>
-              {invoice.notes && (
+          {/* Section validité */}
+          <View style={styles.validitySection}>
+            <Text style={styles.validityTitle}>VALIDITÉ DU DEVIS</Text>
+            <Text style={styles.validityText}>Ce devis est valable jusqu'au {formatDate(quote.validityDate)}.</Text>
+            <Text style={styles.validityText}>Pour accepter ce devis, veuillez nous le retourner signé avec la mention "Bon pour accord".</Text>
+          </View>
+
+          {/* Notes et conditions */}
+          {(quote.notes || quote.termsConditions) && (
+            <View style={[styles.notesSection, {marginTop: 15}]}>
+              {quote.notes && (
                 <>
-                  <Text style={styles.notesTitle}>NOTES IMPORTANTES</Text>
-                  <Text style={styles.notesText}>{invoice.notes}</Text>
+                  <Text style={styles.notesTitle}>NOTES</Text>
+                  <Text style={styles.notesText}>{quote.notes}</Text>
                 </>
               )}
-              {invoice.paymentTerms && (
+              {quote.termsConditions && (
                 <>
-                  {invoice.notes && <Text style={{marginTop: 5}}></Text>}
-                  <Text style={styles.notesTitle}>CONDITIONS DE PAIEMENT</Text>
-                  <Text style={styles.notesText}>{invoice.paymentTerms}</Text>
-                </>
-              )}
-              {companySettings.rib && (
-                <>
-                  {(invoice.notes || invoice.paymentTerms) && <Text style={{marginTop: 5}}></Text>}
-                  <Text style={styles.notesTitle}>COORDONNEES BANCAIRES</Text>
-                  <Text style={styles.notesText}>{companySettings.rib}</Text>
+                  {quote.notes && <Text style={{marginTop: 5}}></Text>}
+                  <Text style={styles.notesTitle}>CONDITIONS GÉNÉRALES</Text>
+                  <Text style={styles.notesText}>{quote.termsConditions}</Text>
                 </>
               )}
             </View>
@@ -413,12 +431,12 @@ const InvoicePDFDocument: React.FC<InvoicePDFProps> = ({ invoice, client, lineIt
 
           {/* Footer moderne */}
           <View style={[styles.footer, {marginTop: lineItems.length > 5 ? 10 : 20}]}>
-            <Text style={styles.footerText}>Paiement par virement • Merci pour votre confiance</Text>
+            <Text style={styles.footerText}>Merci pour votre confiance</Text>
             <Text style={styles.footerText}>
-              {companySettings.email && `Email: ${companySettings.email}`}
-              {companySettings.email && companySettings.phone && ' • '}
-              {companySettings.phone && `Tél: ${companySettings.phone}`}
-              {(!companySettings.email && !companySettings.phone) && 'Email: contact@orbis.fr • Tél: +33 1 23 45 67 89'}
+              {companySettings?.email && `Email: ${companySettings.email}`}
+              {companySettings?.email && companySettings?.phone && ' • '}
+              {companySettings?.phone && `Tél: ${companySettings.phone}`}
+              {(!companySettings?.email && !companySettings?.phone) && 'Email: contact@orbis.fr • Tél: +33 1 23 45 67 89'}
             </Text>
           </View>
         </View>
@@ -427,7 +445,7 @@ const InvoicePDFDocument: React.FC<InvoicePDFProps> = ({ invoice, client, lineIt
   );
 };
 
-export const InvoicePDFViewer: React.FC<InvoicePDFProps> = (props) => {
+export const QuotePDFViewer: React.FC<QuotePDFProps> = (props) => {
   const { user } = useAuth();
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -451,7 +469,7 @@ export const InvoicePDFViewer: React.FC<InvoicePDFProps> = (props) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
         <span className="ml-2">Chargement des paramètres...</span>
       </div>
     );
@@ -459,12 +477,12 @@ export const InvoicePDFViewer: React.FC<InvoicePDFProps> = (props) => {
 
   return (
     <PDFViewer width="100%" height="600px">
-      <InvoicePDFDocument {...props} companySettings={companySettings} />
+      <QuotePDFDocument {...props} companySettings={companySettings} />
     </PDFViewer>
   );
 };
 
-export default function InvoicePDF({ invoice, client }: InvoicePDFProps) {
+export default function QuotePDF({ quote, client }: QuotePDFProps) {
   const { user } = useAuth();
   const [companySettings, setCompanySettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -485,14 +503,14 @@ export default function InvoicePDF({ invoice, client }: InvoicePDFProps) {
     loadSettings();
   }, [user]);
 
-  if (!invoice || !client) {
-    return <div>Données manquantes pour générer la facture</div>;
+  if (!quote || !client) {
+    return <div>Données manquantes pour générer le devis</div>;
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
         <span className="ml-2">Chargement des paramètres...</span>
       </div>
     );
@@ -501,13 +519,13 @@ export default function InvoicePDF({ invoice, client }: InvoicePDFProps) {
   return (
     <div className="w-full h-screen">
       <PDFViewer width="100%" height="100%">
-        <InvoicePDFDocument invoice={invoice} client={client} companySettings={companySettings} />
+        <QuotePDFDocument quote={quote} client={client} companySettings={companySettings} />
       </PDFViewer>
     </div>
   );
 }
 
-export const generateInvoicePDF = async (props: InvoicePDFProps, userId?: string) => {
+export const generateQuotePDF = async (props: QuotePDFProps, userId?: string) => {
   let companySettings = null;
   if (userId) {
     try {
@@ -515,13 +533,13 @@ export const generateInvoicePDF = async (props: InvoicePDFProps, userId?: string
     } catch (error) {
       console.error('Error loading company settings for PDF generation:', error);
     }
-  } else if (props.invoice?.userId) {
+  } else if (props.quote?.userId) {
     try {
-      companySettings = await getCompanySettings(props.invoice.userId);
+      companySettings = await getCompanySettings(props.quote.userId);
     } catch (error) {
-      console.error('Error loading company settings using invoice userId:', error);
+      console.error('Error loading company settings using quote userId:', error);
     }
   }
-  const blob = await pdf(<InvoicePDFDocument {...props} companySettings={companySettings} />).toBlob();
+  const blob = await pdf(<QuotePDFDocument {...props} companySettings={companySettings} />).toBlob();
   return blob;
 };

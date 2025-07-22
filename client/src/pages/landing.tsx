@@ -1,15 +1,10 @@
-import { useState } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, FileText, Users, Clock, BarChart3, Calculator } from "lucide-react";
-import { FirebaseAuth } from "@/components/auth/FirebaseAuth";
 
 export default function Landing() {
-  const [showAuth, setShowAuth] = useState(false);
-
-  if (showAuth) {
-    return <FirebaseAuth />;
-  }
+  const [, setLocation] = useLocation();
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-50">
@@ -24,7 +19,7 @@ export default function Landing() {
               <h1 className="text-xl font-bold text-white">Orbis</h1>
             </div>
             <Button 
-              onClick={() => setShowAuth(true)}
+              onClick={() => setLocation("/auth")}
               className="bg-primary hover:bg-blue-600"
             >
               Se connecter
@@ -46,7 +41,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg" 
-              onClick={() => setShowAuth(true)}
+              onClick={() => setLocation("/auth")}
               className="bg-primary hover:bg-blue-600"
             >
               Commencer gratuitement
@@ -183,7 +178,7 @@ export default function Landing() {
           </p>
           <Button 
             size="lg" 
-            onClick={() => setShowAuth(true)}
+            onClick={() => setLocation("/auth")}
             className="bg-primary hover:bg-blue-600"
           >
             Commencer maintenant

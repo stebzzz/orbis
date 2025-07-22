@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { api } from "@/lib/api";
+import { quotesService, clientsService } from "@/lib/firebase-service";
+import { useAuth } from "@/hooks/useAuth";
 import { insertQuoteSchema } from "@shared/schema";
 import type { Client, Quote } from "@/lib/types";
 
@@ -29,9 +30,15 @@ interface QuoteFormProps {
 
 export default function QuoteForm({ quote, onSuccess, onCancel }: QuoteFormProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/clients"],
+    queryFn: async () => {
+      if (!user) return [];
+      return await clientsService.getAll(user.id);
+    },
+    enabled: !!user,
   });
 
   const form = useForm<QuoteFormData>({
@@ -50,13 +57,25 @@ export default function QuoteForm({ quote, onSuccess, onCancel }: QuoteFormProps
 
   const createMutation = useMutation({
     mutationFn: async (data: QuoteFormData) => {
+      if (!user) throw new Error("Utilisateur non connecté");
+      
+      // Générer un numéro de devis unique
+      const quoteNumber = `D-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+      
       const payload = {
         ...data,
-        issueDate: new Date(data.issueDate).toISOString(),
-        validityDate: new Date(data.validityDate).toISOString(),
+        userId: user.id,
+        number: quoteNumber,
+        status: 'brouillon',
+        issueDate: new Date(data.issueDate),
+        validityDate: new Date(data.validityDate),
+        subtotal: parseFloat(data.subtotal.toString()),
+        vatAmount: parseFloat(data.vatAmount?.toString() || '0'),
+        total: parseFloat(data.total.toString()),
       };
-      const response = await api.createQuote(payload);
-      return response;
+      
+      const quoteId = await quotesService.create(payload, user.id);
+      return { id: quoteId, ...payload };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/quotes"] });
@@ -66,17 +85,58 @@ export default function QuoteForm({ quote, onSuccess, onCancel }: QuoteFormProps
       });
       onSuccess();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Erreur lors de la création du devis:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de créer le devis.",
+        description: error.message || "Impossible de créer le devis.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: QuoteFormData) => {
+      if (!quote || !user) return null;
+      
+      const payload = {
+        ...quote,
+        ...data,
+        userId: user.id,
+        issueDate: new Date(data.issueDate),
+        validityDate: new Date(data.validityDate),
+        subtotal: parseFloat(data.subtotal.toString()),
+        vatAmount: parseFloat(data.vatAmount?.toString() || '0'),
+        total: parseFloat(data.total.toString()),
+      };
+      
+      await quotesService.update(quote.id, payload, user.id);
+      return payload;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/quotes"] });
+      toast({
+        title: "Devis mis à jour",
+        description: "Le devis a été mis à jour avec succès.",
+      });
+      onSuccess();
+    },
+    onError: (error: any) => {
+      console.error('Erreur lors de la mise à jour du devis:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de mettre à jour le devis.",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: QuoteFormData) => {
-    createMutation.mutate(data);
+    if (quote) {
+      updateMutation.mutate(data);
+    } else {
+      createMutation.mutate(data);
+    }
   };
 
   const getClientName = (client: Client) => {
@@ -210,8 +270,15 @@ export default function QuoteForm({ quote, onSuccess, onCancel }: QuoteFormProps
         <Button type="button" variant="outline" onClick={onCancel} className="border-border">
           Annuler
         </Button>
-        <Button type="submit" disabled={createMutation.isPending} className="bg-primary hover:bg-primary/90">
-          {createMutation.isPending ? "Création..." : "Créer le devis"}
+        <Button 
+          type="submit" 
+          disabled={quote ? updateMutation.isPending : createMutation.isPending} 
+          className="bg-primary hover:bg-primary/90"
+        >
+          {quote 
+            ? (updateMutation.isPending ? "Mise à jour..." : "Mettre à jour") 
+            : (createMutation.isPending ? "Création..." : "Créer le devis")
+          }
         </Button>
       </div>
     </form>

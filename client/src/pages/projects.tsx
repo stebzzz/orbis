@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Play, Pause, CheckCircle, Clock, Calendar, User, Edit, Sparkles, Target, TrendingUp, BarChart3, Zap, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/layout/header";
@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ProjectModal } from "@/components/modals/project-modal";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { projectsService, clientsService, createRealtimeListener } from "@/lib/firebase-service";
 import type { Project, Client } from "@shared/schema";
 
 type ProjectStatus = 'planning' | 'en_cours' | 'termine' | 'suspendu';
@@ -56,78 +58,72 @@ const loadingVariants = {
 export default function Projects() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Mock data for projects
-  const projects: Project[] = [
-    {
-      id: "1",
-      name: "Site Web E-commerce",
-      description: "Développement d'une plateforme e-commerce moderne",
-      clientId: "1",
-      status: "en_cours" as ProjectStatus,
-      startDate: new Date("2024-01-01"),
-      endDate: new Date("2024-02-01"),
-      budget: 15000,
-      hourlyRate: 75,
-      deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: "2",
-      name: "Application Mobile",
-      description: "App mobile pour la gestion des commandes",
-      clientId: "2",
-      status: "planning" as ProjectStatus,
-      startDate: new Date("2024-01-08"),
-      endDate: new Date("2024-03-08"),
-      budget: 25000,
-      hourlyRate: 80,
-      deadline: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
-      createdAt: new Date().toISOString()
-    }
-  ];
+  // Fetch projects and clients from Firebase
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const [projectsData, clientsData] = await Promise.all([
+          projectsService.getAll(user.id),
+          clientsService.getAll(user.id)
+        ]);
+        
+        setProjects(projectsData);
+        setClients(clientsData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les données",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Mock data for clients
-  const clients: Client[] = [
-    {
-      id: "1",
-      type: "professionnel",
-      companyName: "TechCorp SARL",
-      firstName: "Jean",
-      lastName: "Dupont",
-      email: "jean.dupont@techcorp.fr",
-      phone: "+33 1 23 45 67 89",
-      address: "123 Rue de la Tech",
-      city: "Paris",
-      postalCode: "75001",
-      country: "France",
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: "2",
-      type: "particulier",
-      firstName: "Marie",
-      lastName: "Martin",
-      email: "marie.martin@email.fr",
-      phone: "+33 6 12 34 56 78",
-      address: "456 Avenue des Fleurs",
-      city: "Lyon",
-      postalCode: "69000",
-      country: "France",
-      createdAt: new Date().toISOString()
-    }
-  ];
+    fetchData();
 
-  // Mock function to update project status
-  const updateProjectStatus = async ({ id, status }: { id: string; status: ProjectStatus }) => {
-    // In a real app, this would update the project in Firebase
-    console.log(`Updating project ${id} to status ${status}`);
-    toast({
-      title: "Succès",
-      description: "Statut du projet mis à jour",
+    // Set up real-time listeners
+    const unsubscribeProjects = createRealtimeListener.projects(user.id, (updatedProjects) => {
+      setProjects(updatedProjects);
     });
+
+    const unsubscribeClients = createRealtimeListener.clients(user.id, (updatedClients) => {
+      setClients(updatedClients);
+    });
+
+    return () => {
+      unsubscribeProjects();
+      unsubscribeClients();
+    };
+  }, [user?.id, toast]);
+
+
+  // Update project status in Firebase
+  const updateProjectStatus = async ({ id, status }: { id: string; status: ProjectStatus }) => {
+    try {
+      await projectsService.update(id, { status });
+      toast({
+        title: "Succès",
+        description: "Statut du projet mis à jour",
+      });
+    } catch (error) {
+      console.error('Error updating project status:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le statut du projet",
+        variant: "destructive"
+      });
+    }
   };
 
   const getStatusBadge = (status: ProjectStatus) => {
@@ -195,6 +191,45 @@ export default function Projects() {
   const handleNewProject = () => {
     setSelectedProject(null);
     setIsModalOpen(true);
+  };
+  
+  // Handle project creation or update from modal
+  const handleProjectSave = async (projectData: Partial<Project>) => {
+    if (!user?.id) return;
+    
+    try {
+      setIsLoading(true);
+      
+      if (selectedProject) {
+        // Update existing project
+        await projectsService.update(selectedProject.id, projectData);
+        toast({
+          title: "Succès",
+          description: "Projet mis à jour avec succès",
+        });
+      } else {
+        // Create new project
+        await projectsService.create({
+          ...projectData,
+          userId: user.id,
+        } as Omit<Project, 'id' | 'createdAt' | 'updatedAt'>, user.id);
+        toast({
+          title: "Succès",
+          description: "Nouveau projet créé avec succès",
+        });
+      }
+      
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Error saving project:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder le projet",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleStatusChange = (project: Project, newStatus: ProjectStatus) => {
@@ -793,6 +828,8 @@ export default function Projects() {
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
           project={selectedProject || undefined}
+          clients={clients}
+          onSave={handleProjectSave}
         />
       </motion.div>
     );

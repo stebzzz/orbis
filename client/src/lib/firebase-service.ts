@@ -11,7 +11,8 @@ import {
   orderBy, 
   limit,
   onSnapshot,
-  Timestamp
+  Timestamp,
+  setDoc
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { 
@@ -72,9 +73,13 @@ const COLLECTIONS = {
 
 // Clients
 export const clientsService = {
-  async getAll(): Promise<Client[]> {
+  async getAll(userId: string): Promise<Client[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, COLLECTIONS.clients));
+      const q = query(
+        collection(db, COLLECTIONS.clients),
+        where('userId', '==', userId)
+      );
+      const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Client));
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -93,10 +98,11 @@ export const clientsService = {
     }
   },
 
-  async create(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async create(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>, userId: string): Promise<string> {
     const now = Timestamp.now();
     const docRef = await addDoc(collection(db, COLLECTIONS.clients), {
       ...client,
+      userId,
       createdAt: now,
       updatedAt: now
     });
@@ -118,9 +124,13 @@ export const clientsService = {
 
 // Projects
 export const projectsService = {
-  async getAll(): Promise<Project[]> {
+  async getAll(userId: string): Promise<Project[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, COLLECTIONS.projects));
+      const q = query(
+        collection(db, COLLECTIONS.projects),
+        where('userId', '==', userId)
+      );
+      const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Project));
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -128,10 +138,11 @@ export const projectsService = {
     }
   },
 
-  async getActive(): Promise<Project[]> {
+  async getActive(userId: string): Promise<Project[]> {
     try {
       const q = query(
         collection(db, COLLECTIONS.projects),
+        where('userId', '==', userId),
         where('status', 'in', ['planning', 'en_cours'])
       );
       const querySnapshot = await getDocs(q);
@@ -142,10 +153,11 @@ export const projectsService = {
     }
   },
 
-  async create(project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async create(project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>, userId: string): Promise<string> {
     const now = Timestamp.now();
     const docRef = await addDoc(collection(db, COLLECTIONS.projects), {
       ...project,
+      userId,
       createdAt: now,
       updatedAt: now
     });
@@ -161,11 +173,52 @@ export const projectsService = {
   }
 };
 
+// Company Settings
+export const companySettingsService = {
+  async get(userId: string): Promise<CompanySettings | null> {
+    try {
+      const docRef = doc(db, COLLECTIONS.companySettings, userId);
+      const docSnap = await getDoc(docRef);
+      return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as CompanySettings : null;
+    } catch (error) {
+      console.error('Error fetching company settings:', error);
+      return null;
+    }
+  },
+
+  async create(settings: Omit<CompanySettings, 'id' | 'createdAt' | 'updatedAt'>, userId: string): Promise<void> {
+    const now = Timestamp.now();
+    await setDoc(doc(db, COLLECTIONS.companySettings, userId), {
+      ...settings,
+      userId,
+      createdAt: now,
+      updatedAt: now
+    });
+  },
+
+  async update(settings: Partial<CompanySettings>, userId: string): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.companySettings, userId);
+    await updateDoc(docRef, {
+      ...settings,
+      updatedAt: Timestamp.now()
+    });
+  }
+};
+
 // Quotes
 export const quotesService = {
-  async getAll(): Promise<Quote[]> {
+  async getAll(userId: string): Promise<Quote[]> {
     try {
-      const q = query(collection(db, COLLECTIONS.quotes), orderBy('createdAt', 'desc'));
+      if (!userId) {
+        console.warn('No userId provided for quotes fetch');
+        return [];
+      }
+      
+      const q = query(
+        collection(db, COLLECTIONS.quotes),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+      );
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => {
         const data = doc.data();
@@ -184,10 +237,11 @@ export const quotesService = {
     }
   },
 
-  async getRecent(limitCount: number = 5): Promise<Quote[]> {
+  async getRecent(userId: string, limitCount: number = 5): Promise<Quote[]> {
     try {
       const q = query(
         collection(db, COLLECTIONS.quotes),
+        where('userId', '==', userId),
         orderBy('createdAt', 'desc'),
         limit(limitCount)
       );
@@ -209,10 +263,11 @@ export const quotesService = {
     }
   },
 
-  async getPending(): Promise<Quote[]> {
+  async getPending(userId: string): Promise<Quote[]> {
     try {
       const q = query(
         collection(db, COLLECTIONS.quotes),
+        where('userId', '==', userId),
         where('status', '==', 'en_attente')
       );
       const querySnapshot = await getDocs(q);
@@ -254,10 +309,11 @@ export const quotesService = {
     }
   },
 
-  async create(quote: Omit<Quote, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async create(quote: Omit<Quote, 'id' | 'createdAt' | 'updatedAt'>, userId: string): Promise<string> {
     const now = Timestamp.now();
     const docRef = await addDoc(collection(db, COLLECTIONS.quotes), {
       ...quote,
+      userId,
       createdAt: now,
       updatedAt: now
     });
@@ -275,9 +331,13 @@ export const quotesService = {
 
 // Invoices
 export const invoicesService = {
-  async getAll(): Promise<Invoice[]> {
+  async getAll(userId: string): Promise<Invoice[]> {
     try {
-      const q = query(collection(db, COLLECTIONS.invoices), orderBy('createdAt', 'desc'));
+      const q = query(
+        collection(db, COLLECTIONS.invoices),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+      );
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => {
         const data = doc.data();
@@ -297,10 +357,11 @@ export const invoicesService = {
     }
   },
 
-  async getRecent(limitCount: number = 5): Promise<Invoice[]> {
+  async getRecent(userId: string, limitCount: number = 5): Promise<Invoice[]> {
     try {
       const q = query(
         collection(db, COLLECTIONS.invoices),
+        where('userId', '==', userId),
         orderBy('createdAt', 'desc'),
         limit(limitCount)
       );
@@ -323,10 +384,11 @@ export const invoicesService = {
     }
   },
 
-  async getUnpaid(): Promise<Invoice[]> {
+  async getUnpaid(userId: string): Promise<Invoice[]> {
     try {
       const q = query(
         collection(db, COLLECTIONS.invoices),
+        where('userId', '==', userId),
         where('status', '==', 'en_attente')
       );
       const querySnapshot = await getDocs(q);
@@ -401,10 +463,11 @@ export const invoicesService = {
     }
   },
 
-  async create(invoice: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async create(invoice: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>, userId: string): Promise<string> {
     const now = Timestamp.now();
     const docRef = await addDoc(collection(db, COLLECTIONS.invoices), {
       ...invoice,
+      userId,
       createdAt: now,
       updatedAt: now
     });
@@ -422,9 +485,13 @@ export const invoicesService = {
 
 // Time Entries
 export const timeEntriesService = {
-  async getAll(): Promise<TimeEntry[]> {
+  async getAll(userId: string): Promise<TimeEntry[]> {
     try {
-      const q = query(collection(db, COLLECTIONS.timeEntries), orderBy('startTime', 'desc'));
+      const q = query(
+        collection(db, COLLECTIONS.timeEntries),
+        where('userId', '==', userId),
+        orderBy('startTime', 'desc')
+      );
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as TimeEntry));
     } catch (error) {
@@ -433,10 +500,11 @@ export const timeEntriesService = {
     }
   },
 
-  async getActiveEntry(): Promise<TimeEntry | null> {
+  async getActiveEntry(userId: string): Promise<TimeEntry | null> {
     try {
       const q = query(
         collection(db, COLLECTIONS.timeEntries),
+        where('userId', '==', userId),
         where('endTime', '==', null),
         limit(1)
       );
@@ -448,8 +516,11 @@ export const timeEntriesService = {
     }
   },
 
-  async create(timeEntry: Omit<TimeEntry, 'id'>): Promise<string> {
-    const docRef = await addDoc(collection(db, COLLECTIONS.timeEntries), timeEntry);
+  async create(timeEntry: Omit<TimeEntry, 'id'>, userId: string): Promise<string> {
+    const docRef = await addDoc(collection(db, COLLECTIONS.timeEntries), {
+      ...timeEntry,
+      userId
+    });
     return docRef.id;
   },
 
@@ -461,9 +532,13 @@ export const timeEntriesService = {
 
 // Catalog Items
 export const catalogItemsService = {
-  async getAll(): Promise<CatalogItem[]> {
+  async getAll(userId: string): Promise<CatalogItem[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, COLLECTIONS.catalogItems));
+      const q = query(
+        collection(db, COLLECTIONS.catalogItems),
+        where('userId', '==', userId)
+      );
+      const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as CatalogItem));
     } catch (error) {
       console.error('Error fetching catalog items:', error);
@@ -471,10 +546,11 @@ export const catalogItemsService = {
     }
   },
 
-  async create(item: Omit<CatalogItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async create(item: Omit<CatalogItem, 'id' | 'createdAt' | 'updatedAt'>, userId: string): Promise<string> {
     const now = Timestamp.now();
     const docRef = await addDoc(collection(db, COLLECTIONS.catalogItems), {
       ...item,
+      userId,
       createdAt: now,
       updatedAt: now
     });
@@ -540,12 +616,12 @@ export const lineItemsService = {
 
 // Dashboard Metrics
 export const dashboardService = {
-  async getMetrics(): Promise<DashboardMetrics> {
+  async getMetrics(userId: string): Promise<DashboardMetrics> {
     try {
       // Get all data in parallel
       const [quotes, invoices] = await Promise.all([
-        quotesService.getPending(),
-        invoicesService.getUnpaid()
+        quotesService.getPending(userId),
+        invoicesService.getUnpaid(userId)
       ]);
 
       // Calculate revenue (sum of paid invoices from current month)
@@ -557,7 +633,7 @@ export const dashboardService = {
       previousMonth.setMonth(previousMonth.getMonth() - 1);
 
       // Calculate revenue from paid invoices
-      const allInvoices = await invoicesService.getAll();
+      const allInvoices = await invoicesService.getAll(userId);
       
       const currentRevenue = allInvoices
         .filter(invoice => {
@@ -617,72 +693,36 @@ export const dashboardService = {
   }
 };
 
-// Company Settings
-export const companySettingsService = {
-  async get(userId: string): Promise<CompanySettings | null> {
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.companySettings),
-        where('userId', '==', userId),
-        limit(1)
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.empty ? null : { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as CompanySettings;
-    } catch (error) {
-      console.error('Error fetching company settings:', error);
-      return null;
-    }
-  },
-
-  async createOrUpdate(settings: Omit<CompanySettings, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    try {
-      // Check if settings already exist for this user
-      const existing = await this.get(settings.userId);
-      
-      if (existing && existing.id) {
-        // Update existing settings
-        const docRef = doc(db, COLLECTIONS.companySettings, existing.id);
-        await updateDoc(docRef, {
-          ...settings,
-          updatedAt: Timestamp.now()
-        });
-        return existing.id;
-      } else {
-        // Create new settings
-        const now = Timestamp.now();
-        const docRef = await addDoc(collection(db, COLLECTIONS.companySettings), {
-          ...settings,
-          createdAt: now,
-          updatedAt: now
-        });
-        return docRef.id;
-      }
-    } catch (error) {
-      console.error('Error saving company settings:', error);
-      throw error;
-    }
-  }
-};
+// Note: Company Settings service is already defined above
 
 // Real-time listeners
 export const createRealtimeListener = {
-  clients: (callback: (clients: Client[]) => void) => {
-    return onSnapshot(collection(db, COLLECTIONS.clients), (snapshot) => {
+  clients: (userId: string, callback: (clients: Client[]) => void) => {
+    const q = query(
+      collection(db, COLLECTIONS.clients),
+      where('userId', '==', userId)
+    );
+    return onSnapshot(q, (snapshot) => {
       const clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Client));
       callback(clients);
     });
   },
 
-  projects: (callback: (projects: Project[]) => void) => {
-    return onSnapshot(collection(db, COLLECTIONS.projects), (snapshot) => {
+  projects: (userId: string, callback: (projects: Project[]) => void) => {
+    const q = query(
+      collection(db, COLLECTIONS.projects),
+      where('userId', '==', userId)
+    );
+    return onSnapshot(q, (snapshot) => {
       const projects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Project));
       callback(projects);
     });
   },
 
-  activeTimeEntry: (callback: (timeEntry: TimeEntry | null) => void) => {
+  activeTimeEntry: (userId: string, callback: (timeEntry: TimeEntry | null) => void) => {
     const q = query(
       collection(db, COLLECTIONS.timeEntries),
+      where('userId', '==', userId),
       where('endTime', '==', null),
       limit(1)
     );

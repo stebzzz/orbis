@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, Lock } from "lucide-react";
 
-const googleProvider = new GoogleAuthProvider();
+
 
 export function FirebaseAuth() {
   const [email, setEmail] = useState("");
@@ -38,143 +37,78 @@ export function FirebaseAuth() {
     }
   };
 
-  const handleEmailSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      toast({
-        title: "Compte créé",
-        description: "Votre compte a été créé avec succès.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erreur de création de compte",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    
-    try {
-      await signInWithPopup(auth, googleProvider);
-      toast({
-        title: "Connexion réussie",
-        description: "Vous êtes maintenant connecté avec Google.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erreur de connexion Google",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
+
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-indigo-950 p-4">
+      <Card className="w-full max-w-md border border-slate-700 bg-slate-800/50 backdrop-blur-sm shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Orbis</CardTitle>
-          <CardDescription>
-            Gestion de projets et facturation
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">Orbis</CardTitle>
+          <CardDescription className="text-slate-400">
+            Connexion à votre espace de gestion
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Connexion</TabsTrigger>
-              <TabsTrigger value="signup">Inscription</TabsTrigger>
-            </TabsList>
+          <div className="w-full">
             
-            <TabsContent value="signin" className="space-y-4">
+            <div className="space-y-4 pt-4">
               <form onSubmit={handleEmailSignIn} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Mail className="h-4 w-4 text-slate-400" />
+                    </div>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 bg-slate-700/50 border-slate-600 text-white"
+                      placeholder="votre@email.com"
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Mot de passe</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+                  <Label htmlFor="password" className="text-sm font-medium">Mot de passe</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Lock className="h-4 w-4 text-slate-400" />
+                    </div>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 bg-slate-700/50 border-slate-600 text-white"
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Se connecter
+                <Button 
+                  type="submit" 
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white transition-colors" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Connexion en cours...
+                    </>
+                  ) : (
+                    "Se connecter"
+                  )}
                 </Button>
               </form>
-            </TabsContent>
-            
-            <TabsContent value="signup" className="space-y-4">
-              <form onSubmit={handleEmailSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Mot de passe</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Créer un compte
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-          
-          <div className="mt-4">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Ou continuer avec
-                </span>
-              </div>
             </div>
-            <Button
-              variant="outline"
-              className="w-full mt-4"
-              onClick={handleGoogleSignIn}
-              disabled={isLoading}
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Google
-            </Button>
+          </div>
+          
+          <div className="mt-6 text-center text-xs text-slate-400">
+            <p>Contactez l'administrateur si vous avez besoin d'un accès.</p>
           </div>
         </CardContent>
       </Card>

@@ -5,12 +5,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
+import Auth from "@/pages/auth";
 import Dashboard from "@/pages/dashboard";
 import Clients from "@/pages/clients";
 import QuotesInvoices from "@/pages/quotes-invoices";
 import Projects from "@/pages/projects";
-
 import Catalog from "@/pages/catalog";
 import Finances from "@/pages/finances";
 import Reports from "@/pages/reports";
@@ -31,8 +30,8 @@ function Router() {
   if (!user) {
     return (
       <Switch>
-        <Route path="/" component={Landing} />
-        <Route component={Landing} />
+        <Route path="/" component={Auth} />
+        <Route component={Auth} />
       </Switch>
     );
   }

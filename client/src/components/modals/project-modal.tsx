@@ -14,10 +14,11 @@ import type { Project, Client } from "@shared/schema";
 const projectFormSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
   description: z.string().optional(),
-  clientId: z.number({ required_error: "Veuillez sélectionner un client" }),
-  hourlyRate: z.number().min(0, "Le taux horaire doit être positif"),
+  clientId: z.string().optional(),
+  hourlyRate: z.number().min(0, "Le taux horaire doit être positif").optional(),
   estimatedHours: z.number().min(0, "Les heures estimées doivent être positives").optional(),
   status: z.enum(["planning", "en_cours", "termine", "suspendu"]),
+  deadline: z.date().optional(),
 });
 
 type ProjectFormData = z.infer<typeof projectFormSchema>;
@@ -26,46 +27,14 @@ interface ProjectModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project?: Project;
+  clients?: Client[];
+  onSave?: (project: Partial<Project>) => Promise<void>;
 }
 
-export function ProjectModal({ open, onOpenChange, project }: ProjectModalProps) {
+export function ProjectModal({ open, onOpenChange, project, clients = [], onSave }: ProjectModalProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!project;
-
-  // Mock clients data
-  const clients: Client[] = [
-    {
-      id: 1,
-      userId: "user1",
-      type: "professionnel",
-      companyName: "TechCorp SARL",
-      email: "contact@techcorp.fr",
-      phone: "01 23 45 67 89",
-      address: "123 Rue de la Tech",
-      city: "Paris",
-      postalCode: "75001",
-      country: "France",
-      siret: "12345678901234",
-      createdAt: new Date("2024-01-15"),
-      updatedAt: new Date("2024-01-15")
-    },
-    {
-      id: 2,
-      userId: "user1",
-      type: "particulier",
-      firstName: "Marie",
-      lastName: "Dupont",
-      email: "marie.dupont@email.fr",
-      phone: "06 12 34 56 78",
-      address: "456 Avenue des Particuliers",
-      city: "Lyon",
-      postalCode: "69000",
-      country: "France",
-      createdAt: new Date("2024-02-01"),
-      updatedAt: new Date("2024-02-01")
-    }
-  ];
 
   const form = useForm<ProjectFormData>({
     resolver: zodResolver(projectFormSchema),
@@ -76,6 +45,7 @@ export function ProjectModal({ open, onOpenChange, project }: ProjectModalProps)
       hourlyRate: project?.hourlyRate || 0,
       estimatedHours: project?.estimatedHours || 0,
       status: project?.status || "planning",
+      deadline: project?.deadline ? new Date(project.deadline) : undefined,
     },
   });
 
@@ -83,16 +53,23 @@ export function ProjectModal({ open, onOpenChange, project }: ProjectModalProps)
     setIsLoading(true);
     
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock project creation/update
-      console.log(isEditing ? 'Updating project:' : 'Creating project:', data);
-      
-      toast({
-        title: "Succès",
-        description: isEditing ? "Projet modifié avec succès" : "Projet créé avec succès",
-      });
+      if (onSave) {
+        // Convert form data to Project format
+        const projectData: Partial<Project> = {
+          ...data,
+          id: project?.id,
+          // Add any other fields needed
+        };
+        
+        await onSave(projectData);
+      } else {
+        // Fallback if no onSave provided
+        console.log(isEditing ? 'Updating project:' : 'Creating project:', data);
+        toast({
+          title: "Succès",
+          description: isEditing ? "Projet modifié avec succès" : "Projet créé avec succès",
+        });
+      }
       
       onOpenChange(false);
       form.reset();
@@ -144,8 +121,8 @@ export function ProjectModal({ open, onOpenChange, project }: ProjectModalProps)
               name="clientId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Client *</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                  <FormLabel>Client</FormLabel>
+                  <Select onValueChange={(value) => field.onChange(value)} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner un client" />
@@ -153,7 +130,7 @@ export function ProjectModal({ open, onOpenChange, project }: ProjectModalProps)
                     </FormControl>
                     <SelectContent>
                       {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id.toString()}>
+                        <SelectItem key={client.id} value={client.id}>
                           {client.type === 'professionnel' ? client.companyName : `${client.firstName} ${client.lastName}`}
                         </SelectItem>
                       ))}
@@ -236,6 +213,28 @@ export function ProjectModal({ open, onOpenChange, project }: ProjectModalProps)
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Description détaillée du projet..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="deadline"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date limite</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="date" 
+                      {...field} 
+                      value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                      onChange={(e) => {
+                        const date = e.target.value ? new Date(e.target.value) : undefined;
+                        field.onChange(date);
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
