@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
 import { InvoicePDFViewer, generateInvoicePDF } from '@/components/pdf/invoice-pdf';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { clientsService, lineItemsService } from '@/lib/firebase-service';
 import type { Invoice, Client } from '@shared/schema';
 
@@ -19,6 +20,7 @@ export function InvoicePDFModal({ open, onOpenChange, invoice }: InvoicePDFModal
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadData = async () => {
@@ -34,7 +36,10 @@ export function InvoicePDFModal({ open, onOpenChange, invoice }: InvoicePDFModal
         
         // Charger les données du client
         console.log('Loading client with ID:', invoice.clientId);
-        const allClients = await clientsService.getAll();
+        if (!user?.id) {
+          throw new Error("Utilisateur non authentifié");
+        }
+        const allClients = await clientsService.getAll(user.id);
         console.log('All clients loaded:', allClients);
         const clientData = allClients.find(c => c.id === invoice.clientId);
         console.log('Client data found:', clientData);

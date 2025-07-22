@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge, BadgeProps } from "@/components/ui/badge";
 import { Play, Pause, Square, Clock } from "lucide-react";
 import { projectsService, timeEntriesService } from "@/lib/firebase-service";
+import { useAuth } from "@/hooks/useAuth";
 import type { TimeEntry, Project } from "@/lib/types";
 
 export default function TimeTracker() {
@@ -11,14 +12,17 @@ export default function TimeTracker() {
   const [activeTimeEntry, setActiveTimeEntry] = useState<TimeEntry | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadData = async () => {
+      if (!user?.id) return;
+      
       try {
         setIsLoading(true);
         const [projectsData, activeEntry] = await Promise.all([
-          projectsService.getAll(),
-          timeEntriesService.getActiveEntry()
+          projectsService.getAll(user.id),
+          timeEntriesService.getActiveEntry(user.id)
         ]);
         setProjects(projectsData);
         if (activeEntry) {
@@ -35,19 +39,21 @@ export default function TimeTracker() {
   }, []);
 
   const startTimer = async (projectId: string) => {
+    if (!user?.id) return;
+    
     try {
       const newTimeEntry: Omit<TimeEntry, 'id'> = {
         projectId,
-        taskId: null,
+        taskId: undefined,
         description: "Temps de travail",
-        startTime: new Date().toISOString(),
-        endTime: null,
+        startTime: new Date(),
+        endTime: undefined,
         duration: 0,
         isRunning: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
-      const createdEntry = await timeEntriesService.create(newTimeEntry);
+      const createdEntry = await timeEntriesService.create(newTimeEntry, user.id);
       setActiveTimeEntry(createdEntry);
     } catch (error) {
       console.error('Erreur lors du démarrage du minuteur:', error);
@@ -59,10 +65,10 @@ export default function TimeTracker() {
       try {
         const updatedEntry = {
           ...activeTimeEntry,
-          endTime: new Date().toISOString(),
+          endTime: new Date(),
           duration: elapsed,
           isRunning: false,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date()
         };
         await timeEntriesService.update(activeTimeEntry.id, updatedEntry);
         setActiveTimeEntry(null);
@@ -75,7 +81,7 @@ export default function TimeTracker() {
 
   // Update elapsed time for active timer
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     
     if (activeTimeEntry && activeTimeEntry.isRunning && activeTimeEntry.startTime) {
       interval = setInterval(() => {
@@ -100,13 +106,13 @@ export default function TimeTracker() {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getProjectName = (projectId: string | null) => {
+  const getProjectName = (projectId: string | null | undefined) => {
     if (!projectId) return "Tâche générale";
-    const project = projects.find(p => p.id === projectId);
+    const project = projects.find((p: Project) => p.id === projectId);
     return project ? project.name : "Projet inconnu";
   };
 
-  const recentProjects = projects.filter(p => p.status === 'en_cours').slice(0, 3);
+  const recentProjects = projects.filter((p: Project) => p.status === 'en_cours').slice(0, 3);
 
   return (
     <Card className="bg-card border-border">
@@ -119,7 +125,7 @@ export default function TimeTracker() {
           <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-primary font-medium">Minuteur Actif</span>
-              <Badge className="bg-primary/20 text-primary border-primary/20">
+              <Badge variant="outline" className="bg-primary/20 text-primary border-primary/20">
                 En cours
               </Badge>
             </div>

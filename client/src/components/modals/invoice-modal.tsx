@@ -1,7 +1,8 @@
+import * as React from "react";
 import { useState, useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, FieldValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import * as z from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Plus, X } from "lucide-react";
-import type { Invoice, Client, CatalogItem } from "@shared/schema";
+import type { Invoice, Client, CatalogItem, InsertInvoice } from "@shared/schema";
 import { invoicesService, clientsService, catalogItemsService, lineItemsService } from "@/lib/firebase-service";
 import { insertInvoiceSchema } from "@shared/schema";
 
@@ -55,10 +56,12 @@ export function InvoiceModal({ open, onOpenChange, invoice, onSuccess }: Invoice
 
   useEffect(() => {
     const loadData = async () => {
+      if (!user?.id) return;
+      
       try {
         const [clientsData, catalogData] = await Promise.all([
-          clientsService.getAll(),
-          catalogItemsService.getAll()
+          clientsService.getAll(user.id),
+          catalogItemsService.getAll(user.id)
         ]);
         setClients(clientsData);
         setCatalogItems(catalogData);
@@ -152,11 +155,8 @@ export function InvoiceModal({ open, onOpenChange, invoice, onSuccess }: Invoice
   }, [open, isEditing, invoice?.id, form]);
 
   const watchedLineItems = form.watch("lineItems");
-  const subtotal = watchedLineItems?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0;
-  const vatAmount = watchedLineItems?.reduce((sum, item) => {
-    const itemTotal = item.quantity * item.unitPrice;
-    return sum + (itemTotal * (item.vatRate / 100));
-  }, 0) || 0;
+  const subtotal = watchedLineItems?.reduce((sum: number, item: {quantity: number, unitPrice: number}) => sum + (item.quantity * item.unitPrice), 0) || 0;
+  const vatAmount = 0; // TVA 0% comme demandé
   const total = subtotal + vatAmount;
 
   const handleSubmit = async (data: InvoiceFormData) => {
@@ -182,7 +182,7 @@ export function InvoiceModal({ open, onOpenChange, invoice, onSuccess }: Invoice
       // Generate invoice number if creating new invoice
       const invoiceNumber = isEditing ? invoice.number : (nextInvoiceNumber || `INV-${Date.now()}`);
       
-      const invoiceData = {
+      const invoiceData: Partial<InsertInvoice> = {
         userId: user.id,
         clientId: data.clientId,
         number: invoiceNumber,
@@ -560,7 +560,7 @@ export function InvoiceModal({ open, onOpenChange, invoice, onSuccess }: Invoice
                 <span>{subtotal.toFixed(2)}€</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>TVA:</span>
+                <span>TVA (0%):</span>
                 <span>{vatAmount.toFixed(2)}€</span>
               </div>
               <div className="flex justify-between text-lg font-bold">

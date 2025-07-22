@@ -5,20 +5,24 @@ import { Progress } from "@/components/ui/progress";
 import { FolderOpen } from "lucide-react";
 import { useState, useEffect } from "react";
 import { projectsService, clientsService } from "@/lib/firebase-service";
+import { useAuth } from "@/hooks/useAuth";
 import type { Project, Client } from "@/lib/types";
 
 export default function ActiveProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadData = async () => {
+      if (!user?.id) return;
+      
       try {
         setIsLoading(true);
         const [projectsData, clientsData] = await Promise.all([
-          projectsService.getAll(),
-          clientsService.getAll()
+          projectsService.getAll(user.id),
+          clientsService.getAll(user.id)
         ]);
         setProjects(projectsData);
         setClients(clientsData);

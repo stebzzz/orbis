@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { clientsService } from "@/lib/firebase-service";
 import type { Client } from "@shared/schema";
 
@@ -33,6 +34,7 @@ interface ClientModalProps {
 
 export function ClientModal({ open, onOpenChange, client }: ClientModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const isEditing = !!client;
   const [isLoading, setIsLoading] = useState(false);
 
@@ -70,8 +72,12 @@ export function ClientModal({ open, onOpenChange, client }: ClientModalProps) {
   const handleClientSubmit = async (data: ClientFormData) => {
     setIsLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error("Utilisateur non authentifié");
+      }
+      
       const clientData: any = {
-        userId: 'current-user', // TODO: Get from auth context
+        userId: user.id,
         type: data.type as 'particulier' | 'professionnel',
         email: data.email || '',
         createdAt: new Date(),
@@ -95,7 +101,7 @@ export function ClientModal({ open, onOpenChange, client }: ClientModalProps) {
       if (isEditing && client?.id) {
         await clientsService.update(client.id.toString(), { ...clientData, updatedAt: new Date() });
       } else {
-        await clientsService.create(clientData);
+        await clientsService.create(clientData, user.id);
       }
       
       toast({

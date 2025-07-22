@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, CheckCircle, TrendingUp, UserPlus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { invoicesService, quotesService, clientsService } from "@/lib/firebase-service";
+import { useAuth } from "@/hooks/useAuth";
 import type { Invoice, Quote, Client } from "@/lib/types";
 
 interface Activity {
@@ -19,15 +20,18 @@ interface Activity {
 export default function RecentActivity() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadActivities = async () => {
+      if (!user?.id) return;
+      
       try {
         setIsLoading(true);
         const [invoices, quotes, clients] = await Promise.all([
-          invoicesService.getAll(),
-          quotesService.getAll(),
-          clientsService.getAll()
+          invoicesService.getAll(user.id),
+          quotesService.getAll(user.id),
+          clientsService.getAll(user.id)
         ]);
 
         const recentActivities: Activity[] = [];

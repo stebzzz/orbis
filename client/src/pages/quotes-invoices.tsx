@@ -202,12 +202,12 @@ export default function QuotesInvoices() {
   };
 
   const refreshData = async () => {
-    if (!user) return;
+    if (!user?.id) return;
     
     try {
       const [quotesData, invoicesData] = await Promise.all([
-        quotesService.getAll(),
-        invoicesService.getAll()
+        quotesService.getAll(user.id),
+        invoicesService.getAll(user.id)
       ]);
       setQuotes(quotesData);
       setInvoices(invoicesData);
@@ -661,37 +661,36 @@ export default function QuotesInvoices() {
       </motion.div>
 
       {/* Enhanced Modals */}
-      <AnimatePresence>
-        <QuoteModal 
-          open={isQuoteModalOpen}
-          onOpenChange={setIsQuoteModalOpen}
-          quote={selectedQuote || undefined}
-          onSuccess={refreshData}
+      {/* Chaque modal est rendu individuellement pour éviter les problèmes de clés dupliquées */}
+      <QuoteModal 
+        open={isQuoteModalOpen}
+        onOpenChange={setIsQuoteModalOpen}
+        quote={selectedQuote || undefined}
+        onSuccess={refreshData}
+      />
+      
+      <InvoiceModal 
+        open={isInvoiceModalOpen}
+        onOpenChange={setIsInvoiceModalOpen}
+        invoice={selectedInvoice || undefined}
+        onSuccess={refreshData}
+      />
+      
+      {selectedInvoiceForPDF && (
+        <InvoicePDFModal 
+          open={isPDFModalOpen}
+          onOpenChange={setIsPDFModalOpen}
+          invoice={selectedInvoiceForPDF}
         />
-        
-        <InvoiceModal 
-          open={isInvoiceModalOpen}
-          onOpenChange={setIsInvoiceModalOpen}
-          invoice={selectedInvoice || undefined}
-          onSuccess={refreshData}
-        />
-        
-        {selectedInvoiceForPDF && (
-          <InvoicePDFModal 
-            open={isPDFModalOpen}
-            onOpenChange={setIsPDFModalOpen}
-            invoice={selectedInvoiceForPDF}
-          />
-        )}
+      )}
 
-        {selectedQuoteForPDF && (
-          <QuotePDFModal 
-            open={isQuotePDFModalOpen}
-            onOpenChange={setIsQuotePDFModalOpen}
-            quote={selectedQuoteForPDF}
-          />
-        )}
-      </AnimatePresence>
+      {selectedQuoteForPDF && (
+        <QuotePDFModal 
+          open={isQuotePDFModalOpen}
+          onOpenChange={setIsQuotePDFModalOpen}
+          quote={selectedQuoteForPDF}
+        />
+      )}
     </motion.div>
   );
 }

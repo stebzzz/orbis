@@ -28,26 +28,56 @@ export function QuotePDFModal({ open, onOpenChange, quote }: QuotePDFModalProps)
       try {
         // Charger le client
         if (quote.clientId) {
-          const clientData = await clientsService.getById(quote.clientId.toString());
+          console.log('Chargement du client avec ID:', quote.clientId, 'Type:', typeof quote.clientId);
+          // S'assurer que clientId est une chaîne de caractères valide et non vide
+          const clientId = String(quote.clientId); // Utiliser String() au lieu de toString() pour éviter l'erreur de type 'never'
+          if (!clientId || clientId === 'undefined' || clientId === 'null') {
+            console.error('ClientId invalide:', clientId);
+            throw new Error('ID client invalide');
+          }
+          const clientData = await clientsService.getById(clientId);
+          console.log('Données client récupérées:', clientData);
+          if (!clientData) {
+            console.error('Aucune donnée client trouvée pour l\'ID:', clientId);
+            throw new Error('Client introuvable');
+          }
           setClient(clientData);
+        } else {
+          console.error('Aucun clientId trouvé dans le devis:', quote);
+          throw new Error('ID client manquant');
         }
         
         // Charger les lignes du devis
         if (quote.id) {
+          console.log('Chargement des lignes pour le devis ID:', quote.id);
           const lineItemsData = await lineItemsService.getByQuoteId(quote.id.toString());
+          console.log('Lignes récupérées:', lineItemsData);
           setLineItems(lineItemsData.map(item => ({
-            product: item.name || '',
+            product: item.product || '', // Utiliser item.product au lieu de item.name pour correspondre au type LineItem
             description: item.description || '',
             quantity: item.quantity || 0,
             unitPrice: item.unitPrice || 0,
-            vatRate: 0.2 // TVA 20%
+            vatRate: 0 // TVA 0%
           })));
         }
       } catch (error) {
         console.error('Error loading data for PDF:', error);
+        let errorMessage = "Impossible de charger les données du devis";
+        
+        // Messages d'erreur plus spécifiques
+        if (error instanceof Error) {
+          if (error.message === 'ID client invalide') {
+            errorMessage = "L'identifiant du client est invalide";
+          } else if (error.message === 'Client introuvable') {
+            errorMessage = "Le client associé à ce devis est introuvable";
+          } else if (error.message === 'ID client manquant') {
+            errorMessage = "Aucun client n'est associé à ce devis";
+          }
+        }
+        
         toast({
           title: "Erreur",
-          description: "Impossible de charger les données du devis",
+          description: errorMessage,
           variant: "destructive",
         });
       } finally {
@@ -134,7 +164,11 @@ export function QuotePDFModal({ open, onOpenChange, quote }: QuotePDFModalProps)
           ) : !client ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <p className="text-slate-400">Impossible de charger les informations du client</p>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-red-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p className="text-slate-400 text-lg font-medium mb-2">Impossible de charger les informations du client</p>
+                <p className="text-slate-500 text-sm">Veuillez vérifier que le client existe et qu'il est correctement associé à ce devis.</p>
               </div>
             </div>
           ) : (

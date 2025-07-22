@@ -1,7 +1,8 @@
+import * as React from "react";
 import { useState, useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, FieldValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import * as z from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -12,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { quotesService, clientsService, catalogItemsService } from "@/lib/firebase-service";
 import { Plus, X } from "lucide-react";
-import type { Quote, Client, CatalogItem } from "@shared/schema";
+import type { Quote, Client, CatalogItem, InsertQuote } from "@shared/schema";
 
 const lineItemSchema = z.object({
   description: z.string().min(1, "Description requise"),
@@ -51,9 +52,11 @@ export function QuoteModal({ open, onOpenChange, quote, onSuccess }: QuoteModalP
   useEffect(() => {
     const loadData = async () => {
       try {
+        if (!user?.id) return;
+        
         const [clientsData, catalogData] = await Promise.all([
-          clientsService.getAll(),
-          catalogItemsService.getAll()
+          clientsService.getAll(user.id),
+          catalogItemsService.getAll(user.id)
         ]);
         setClients(clientsData);
         setCatalogItems(catalogData);
@@ -98,8 +101,8 @@ export function QuoteModal({ open, onOpenChange, quote, onSuccess }: QuoteModalP
   });
 
   const watchedLineItems = form.watch("lineItems");
-  const subtotal = watchedLineItems?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0;
-  const vatAmount = subtotal * 0.2; // TVA 20%
+  const subtotal = watchedLineItems?.reduce((sum: number, item: {quantity: number, unitPrice: number}) => sum + (item.quantity * item.unitPrice), 0) || 0;
+  const vatAmount = 0; // TVA 0% comme demandé
   const total = subtotal + vatAmount;
 
   const handleQuoteSubmit = async (data: QuoteFormData) => {
@@ -120,9 +123,9 @@ export function QuoteModal({ open, onOpenChange, quote, onSuccess }: QuoteModalP
       // Generate quote number if creating new quote
       const quoteNumber = isEditing ? quote.number : `DEV-${Date.now()}`;
       
-      const quoteData = {
+      const quoteData: Partial<InsertQuote> = {
         userId: user.id,
-        clientId: parseInt(data.clientId),
+        clientId: data.clientId,
         number: quoteNumber,
         status: 'brouillon' as const,
         issueDate: new Date(),
@@ -141,7 +144,7 @@ export function QuoteModal({ open, onOpenChange, quote, onSuccess }: QuoteModalP
         await quotesService.update(quote.id.toString(), quoteData);
       } else {
         console.log('Creating new quote');
-        const newQuoteId = await quotesService.create(quoteData);
+        const newQuoteId = await quotesService.create(quoteData, user.id);
         console.log('New quote created with ID:', newQuoteId);
       }
       
@@ -419,7 +422,7 @@ export function QuoteModal({ open, onOpenChange, quote, onSuccess }: QuoteModalP
                 <span>{subtotal.toFixed(2)}€</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>TVA (20%):</span>
+                <span>TVA (0%):</span>
                 <span>{vatAmount.toFixed(2)}€</span>
               </div>
               <div className="flex justify-between text-lg font-bold">

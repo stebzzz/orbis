@@ -27,7 +27,7 @@ export function FirebaseTest() {
       
       // Test 2: Try to read data (should work with basic rules)
       console.log('Testing read operations...');
-      const clients = await clientsService.getAll();
+      const clients = await clientsService.getAll(user.id);
       console.log('Clients read successfully:', clients.length, 'clients found');
       
       // Test 3: Try to create a simple test quote

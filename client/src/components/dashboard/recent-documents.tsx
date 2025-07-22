@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Eye, Download, MoreHorizontal, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { quotesService, invoicesService, clientsService } from "@/lib/firebase-service";
+import { useAuth } from "@/hooks/useAuth";
 import type { Quote, Invoice, Client, DocumentStatus } from "@/lib/types";
 
 export default function RecentDocuments() {
@@ -11,15 +12,18 @@ export default function RecentDocuments() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadDocuments = async () => {
+      if (!user?.id) return;
+      
       try {
         setIsLoading(true);
         const [quotesData, invoicesData, clientsData] = await Promise.all([
-          quotesService.getAll(),
-          invoicesService.getAll(),
-          clientsService.getAll()
+          quotesService.getAll(user.id),
+          invoicesService.getAll(user.id),
+          clientsService.getAll(user.id)
         ]);
         setQuotes(quotesData);
         setInvoices(invoicesData);

@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClientModal } from "@/components/modals/client-modal";
 import { clientsService } from "@/lib/firebase-service";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import type { Client } from "@shared/schema";
 
 export default function Clients() {
@@ -21,11 +22,14 @@ export default function Clients() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   useEffect(() => {
+    if (!user?.id) return;
+    
     const loadClients = async () => {
       try {
-        const clientsData = await clientsService.getAll();
+        const clientsData = await clientsService.getAll(user.id);
         setClients(clientsData);
       } catch (error) {
         console.error('Error loading clients:', error);
@@ -40,7 +44,7 @@ export default function Clients() {
     };
 
     loadClients();
-  }, [toast]);
+  }, [toast, user]);
 
   const deleteClientMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -49,8 +53,9 @@ export default function Clients() {
     onSuccess: () => {
       // Reload clients after deletion
       const loadClients = async () => {
+        if (!user?.id) return;
         try {
-          const clientsData = await clientsService.getAll();
+          const clientsData = await clientsService.getAll(user.id);
           setClients(clientsData);
         } catch (error) {
           console.error('Error reloading clients:', error);
@@ -104,10 +109,10 @@ export default function Clients() {
 
   const handleModalClose = async (open: boolean) => {
     setIsModalOpen(open);
-    if (!open) {
+    if (!open && user?.id) {
       // Reload clients when modal closes (in case a client was created/updated)
       try {
-        const clientsData = await clientsService.getAll();
+        const clientsData = await clientsService.getAll(user.id);
         setClients(clientsData);
       } catch (error) {
         console.error('Error reloading clients:', error);
