@@ -1,0 +1,115 @@
+Cahier des Charges Fonctionnel : Application Orbis
+Version : 2.0
+Date : 10/07/2025
+Nom du Projet : Orbis
+
+1. Préambule et Objectifs
+1.1. Contexte
+Les auto-entrepreneurs et freelances jonglent avec de multiples responsabilités, de la production à la gestion administrative. Le manque d'un outil centralisé et intelligent est une source de perte de temps, de stress et de risques d'erreurs, entravant la visibilité sur la santé réelle de leur activité.
+
+1.2. Vision du Projet
+Orbis est une plateforme de gestion tout-en-un conçue pour devenir le centre de contrôle de l'auto-entrepreneur moderne. L'objectif est de fournir un outil simple, puissant et automatisé qui transforme les contraintes administratives en un levier de croissance.
+
+1.3. Objectifs Clés
+
+Centraliser : Regrouper clients, projets, devis, factures, temps de travail et finances en un seul endroit.
+
+Automatiser : Éliminer les tâches répétitives comme les relances de factures et simplifier le suivi des paiements.
+
+Piloter : Offrir une vision claire et en temps réel de la performance via un tableau de bord intelligent.
+
+Sécuriser : Garantir la conformité légale des documents et la sécurité des données financières.
+
+2. Périmètre Fonctionnel
+2.1. Module "Tableau de Bord"
+L'écran d'accueil qui fournit une synthèse stratégique de l'activité.
+
+Indicateurs Clés : Chiffre d'affaires (mois/trimestre/année), jauge de progression vers les plafonds de CA.
+
+Pilotage Financier : Montant total des devis en attente, montant des factures impayées et en retard.
+
+Prévisions : Estimation en temps réel des cotisations sociales (URSSAF) à payer pour la période en cours.
+
+Vue Projets : Synthèse des projets en cours et du temps suivi.
+
+Accès Rapides : Création d'un devis, d'une facture, d'un client ou d'un projet en un clic.
+
+2.2. Module "Clients"
+Une base de données clients simple et efficace.
+
+Création, modification, suppression et recherche de fiches clients (particuliers et professionnels).
+
+Vue centralisée par client de tout l'historique : informations de contact, projets, devis, factures et notes.
+
+2.3. Module "Devis & Factures"
+Le moteur de la facturation, de la proposition à l'encaissement.
+
+Création de devis et factures professionnels et conformes à la législation française.
+
+Numérotation automatique, unique et infalsifiable des documents.
+
+Gestion de la TVA (applicable ou non selon le statut de l'utilisateur).
+
+Suivi des statuts (Brouillon, Envoyé, Accepté, Refusé, Payé, En retard).
+
+Conversion d'un devis accepté en facture en un clic.
+
+Génération de PDF personnalisés avec le logo et les informations de l'entreprise.
+
+Relances Automatiques : Configuration de rappels par e-mail qui sont envoyés automatiquement aux clients pour les factures arrivant à échéance ou déjà en retard.
+
+2.4. Module "Projets & Suivi du Temps"
+Pour valoriser chaque minute de travail.
+
+Création de projets distincts, associés à des clients.
+
+Organisation des projets en tâches simples (à faire / terminé).
+
+Suivi du temps précis via un chronomètre intégré (démarrer/arrêter) ou par saisie manuelle.
+
+Le temps suivi est automatiquement lié à son projet et son client.
+
+Facturation du temps passé : Possibilité de générer une facture à partir des heures enregistrées sur un projet, en un seul clic.
+
+2.5. Module "Catalogue"
+La bibliothèque de produits et services pour accélérer l'édition des documents.
+
+Enregistrement des prestations et produits récurrents (description, prix unitaire HT, taux de TVA par défaut).
+
+Ajout rapide des éléments du catalogue lors de la création d'un devis ou d'une facture.
+
+2.6. Module "Finances & Rapprochement Bancaire"
+Pour un contrôle total sur les flux financiers.
+
+Synchronisation Bancaire Sécurisée : Connexion unique et sécurisée (norme DSP2) au compte bancaire professionnel de l'utilisateur.
+
+Rapprochement Automatisé : Le système importe les transactions bancaires et permet de les lier :
+
+À une facture en attente, pour la marquer comme "Payée" automatiquement.
+
+À une dépense, en créant une nouvelle entrée dans le registre des achats.
+
+Gestion des Dépenses : Saisie manuelle des dépenses professionnelles avec la possibilité de joindre un justificatif (photo ou PDF).
+
+2.7. Module "Rapports & Exports"
+Pour piloter et se conformer aux obligations légales.
+
+Simulateur de Cotisations : Basé sur le CA encaissé et les paramètres de l'utilisateur (ACRE, versement libératoire, type d'activité), le module fournit une estimation fiable du montant à déclarer à l'URSSAF.
+
+Exports Comptables : Génération en un clic des documents obligatoires au format CSV ou Excel :
+
+Livre des recettes (détail des factures encaissées).
+
+Registre des achats (détail des dépenses professionnelles).
+
+Export de la base de données clients.
+
+3. Contraintes & Exigences Non-Fonctionnelles
+Interface : Épurée, intuitive et entièrement responsive pour un usage fluide sur ordinateur, tablette et smartphone.
+
+Sécurité : Priorité absolue. Accès par authentification, chiffrement des données (HTTPS), hébergement sécurisé en Europe, conformité RGPD et protocoles de sécurité bancaire pour la synchronisation.
+
+Performance : L'application doit être rapide et réactive en toutes circonstances.
+
+Fiabilité : Sauvegardes automatiques et régulières de toutes les données utilisateur.
+
